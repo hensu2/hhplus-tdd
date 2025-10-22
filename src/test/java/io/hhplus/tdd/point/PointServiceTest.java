@@ -91,7 +91,7 @@ public class PointServiceTest {
 
         // when
         when(userPointTable.selectById(userId)).thenReturn(userPoint);  // userPoint 조회
-        when(userPointTable.insertOrUpdate(userId,updatedUserPoint.point()));   //2번째 매개변수는 업데이트 할 포인트
+        when(userPointTable.insertOrUpdate(userId,updatedUserPoint.point())).thenReturn(updatedUserPoint);   //2번째 매개변수는 업데이트 할 포인트
 
         // when
         UserPoint result = pointService.chargePoint(userId, chargeAmount);  // 포인트 조회 후 return.point 값 + chargeAmount 사용
