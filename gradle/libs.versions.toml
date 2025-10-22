@@ -9,6 +9,7 @@ spring_mockk = "4.0.2"
 
 lombok = "1.18.22"
 
+springdoc_openapi = "2.3.0"
 redisson = "3.25.2"
 # test
 junit = "5.9.3"
@@ -37,6 +38,8 @@ spring_boot_starter_data_jpa = { module = "org.springframework.boot:spring-boot-
 spring_boot_starter_actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring_boot_configuration_processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 spring_boot_starter_test = { module = "org.springframework.boot:spring-boot-starter-test" }
+
+springdoc_openapi_starter_webmvc_ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc_openapi" }
 
 spring_boot_testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 test_containers_junit_jupiter = { module = "org.testcontainers:junit-jupiter" }
