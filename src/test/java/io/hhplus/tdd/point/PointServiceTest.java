@@ -55,7 +55,7 @@ public class PointServiceTest {
 
     @Test
     @DisplayName("포인트 조회 후 없을 시 포인트가 0 인 UserPoint객체 리턴")
-    void getUserPoint_() {
+    void getUserPoint_NotUser() {
         /*
             테스트 사유
            UserPointTable selectById 리턴값이  map.getOrDefault(id, UserPoint.empty(id))
@@ -79,4 +79,25 @@ public class PointServiceTest {
         assertThat(result.id()).isEqualTo(userId); // 같은지
         assertThat(result.point()).isEqualTo(0); // 같은지
     }
+
+    @Test
+    @DisplayName("포인트 충전한다")
+    void chargePoint() {
+        // given
+        long userId = 1L;
+        long chargeAmount = 500L;   // 충전금액
+        UserPoint userPoint = new UserPoint(userId, 1000L, System.currentTimeMillis()); // userPoint 조회
+        UserPoint updatedUserPoint = new UserPoint(userId, 1500L, System.currentTimeMillis());  // 리턴값 설정
+
+        // when
+        when(userPointTable.selectById(userId)).thenReturn(userPoint);  // userPoint 조회
+        when(userPointTable.insertOrUpdate(userId,updatedUserPoint.point()));   //2번째 매개변수는 업데이트 할 포인트
+
+        // when
+        UserPoint result = pointService.chargePoint(userId, chargeAmount);  // 포인트 조회 후 return.point 값 + chargeAmount 사용
+
+        assertThat(result.point()).isEqualTo(userPoint.point()+chargeAmount); // null이 아닌지
+        assertThat(result.id()).isEqualTo(userId);  // userId 가 같은지
+    }
+
 }
