@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -93,11 +94,24 @@ public class PointServiceTest {
         when(userPointTable.selectById(userId)).thenReturn(userPoint);  // userPoint 조회
         when(userPointTable.insertOrUpdate(userId,updatedUserPoint.point())).thenReturn(updatedUserPoint);   //2번째 매개변수는 업데이트 할 포인트
 
-        // when
+        // then
         UserPoint result = pointService.chargePoint(userId, chargeAmount);  // 포인트 조회 후 return.point 값 + chargeAmount 사용
 
         assertThat(result.point()).isEqualTo(userPoint.point()+chargeAmount); // null이 아닌지
         assertThat(result.id()).isEqualTo(userId);  // userId 가 같은지
+    }
+
+    @Test
+    @DisplayName("포인트 충전 시 포인트가 0면 에러 발생")
+    void chargePoint_Not() {
+        // given
+        long userId = 1L;
+        long chargeAmount = 0;   // 충전금액
+
+        // when & then
+        assertThatThrownBy(() -> pointService.chargePoint(userId, chargeAmount)) //
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("충전 금액은 0보다 커야 합니다.");
     }
 
 }
