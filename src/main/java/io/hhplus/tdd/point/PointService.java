@@ -4,6 +4,8 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class PointService {
     private final UserPointTable userPointTable;
@@ -45,5 +47,9 @@ public class PointService {
         if(amount < 1){
             throw new IllegalArgumentException(comment);
         }
+    }
+
+    public List<PointHistory> getPointHistory(long userId) {
+        return pointHistoryTable.selectAllByUserId(userId);
     }
 }
