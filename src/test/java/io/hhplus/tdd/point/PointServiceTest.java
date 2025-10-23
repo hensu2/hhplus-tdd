@@ -179,6 +179,20 @@ public class PointServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("사용 금액은 0보다 커야 합니다.");
     }
+    @Test
+    @DisplayName("잔액이 부족하면 예외가 발생한다")
+    void usePoint_InsufficientBalance() {
+        // given
+        long userId = 1L;
+        long useAmount = 1500L;
+        UserPoint currentPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
 
+        when(userPointTable.selectById(userId)).thenReturn(currentPoint);
+
+        // when & then
+        assertThatThrownBy(() -> pointService.usePoint(userId, useAmount))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("포인트가 부족합니다.");
+    }
 
 }
