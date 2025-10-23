@@ -203,6 +203,7 @@ public class PointServiceTest {
         // given
         // 파라미터 설정
         long userId = 1L;
+        long time
         // 리턴 데이터 설정
         List<PointHistory> userPointHistory = List.of(
                 new PointHistory(1L, userId, 1000L, TransactionType.CHARGE, now),
