@@ -154,4 +154,18 @@ public class PointServiceTest {
         verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.USE), eq(result.updateMillis()));
     }
 
+    @Test
+    @DisplayName("포인트 사용 시 포인트가 0면 에러 발생")
+    void usePoint_InvalidAmount() {
+        // given
+        long userId = 1L;
+        long useAmount = 0;   // 사용금액
+
+        // when & then
+        assertThatThrownBy(() -> pointService.usePoint(userId, useAmount)) //
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("사용 금액은 0보다 커야 합니다.");
+    }
+
+
 }
