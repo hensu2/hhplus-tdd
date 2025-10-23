@@ -188,8 +188,8 @@ class PointIntegrationTest {
         // then: 내역 조회 - 3건의 거래가 기록되어야 함
         mockMvc.perform(get("/point/{id}/histories", userId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(3))))
-                .andExpect(jsonPath("$[*].userId", everyItem(equalTo((int) userId))));
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(3)))) // 3번충전으로 인하여 리턴 {[]} 의 크기는 3
+                .andExpect(jsonPath("$[*].userId", everyItem(equalTo((int) userId))));  // 배열의 순서의 전체가 userId 맞는지 확인
     }
 
 }
