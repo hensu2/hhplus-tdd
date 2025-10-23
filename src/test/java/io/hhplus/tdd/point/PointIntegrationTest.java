@@ -192,4 +192,37 @@ class PointIntegrationTest {
                 .andExpect(jsonPath("$[*].userId", everyItem(equalTo((int) userId))));  // 배열의 순서의 전체가 userId 맞는지 확인
     }
 
+    @Test
+    @DisplayName("여러 사용자가 독립적으로 포인트를 관리할 수 있다")
+    void multipleUsersIndependentPoints() throws Exception {
+        // given
+        long user1 = 100L;
+        long user2 = 200L;
+        long chargeAmount1 = 1000L;
+        long chargeAmount2 = 2000L;
+
+        // when: 사용자1 충전
+        mockMvc.perform(patch("/point/{id}/charge", user1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount1)))
+                .andExpect(status().isOk());
+
+        // when: 사용자2 충전
+        mockMvc.perform(patch("/point/{id}/charge", user2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount2)))
+                .andExpect(status().isOk());
+
+        // then: 각 사용자의 포인트가 독립적으로 관리됨
+        mockMvc.perform(get("/point/{id}", user1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(user1))
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) chargeAmount1)));
+
+        mockMvc.perform(get("/point/{id}", user2))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(user2))
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) chargeAmount2)));
+    }
+
 }
