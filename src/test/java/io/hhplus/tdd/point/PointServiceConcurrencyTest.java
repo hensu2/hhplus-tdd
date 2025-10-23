@@ -90,4 +90,45 @@ public class PointServiceConcurrencyTest {
         assertThat(result.point()).isEqualTo(initialAmount);
         assertThat(successCount.get()).isEqualTo(threadCount);
     }
+
+    @Test
+    @DisplayName("잔액이 부족한 상황에서 동시에 여러 스레드가 사용을 시도하면 일부만 성공한다")
+    void concurrentUseWithInsufficientBalance() throws InterruptedException {
+        // given
+        long userId = 3L;
+        long initialAmount = 1000L;
+        int threadCount = 20;
+        long useAmount = 100L;
+
+        // 초기 포인트 충전 (1000 포인트)
+        pointService.chargePoint(userId, initialAmount);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failCount = new AtomicInteger(0);
+
+        // when: 20개 스레드가 동시에 100포인트씩 사용 시도 (총 2000 포인트 필요하지만 1000만 보유)
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    pointService.usePoint(userId, useAmount);
+                    successCount.incrementAndGet();
+                } catch (IllegalArgumentException e) {
+                    // 잔액 부족으로 실패
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // then: 10번만 성공하고 10번은 실패해야 함
+        UserPoint result = pointService.getUserPoint(userId);
+        assertThat(successCount.get()).isEqualTo(10);
+        assertThat(failCount.get()).isEqualTo(10);
+        assertThat(result.point()).isEqualTo(0L); // 1000 - (10 * 100) = 0
+    }
 }
