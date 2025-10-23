@@ -136,4 +136,25 @@ class PointIntegrationTest {
                         .content(String.valueOf(negativeAmount)))
                 .andExpect(status().is4xxClientError());
     }
+
+    @Test
+    @DisplayName("잔액보다 많은 포인트를 사용하려 하면 실패한다")
+    void usePointMoreThanBalance() throws Exception {
+        // given
+        long userId = 4L;
+        long chargeAmount = 1000L;
+        long useAmount = 2000L;
+
+        // when: 포인트 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount)))
+                .andExpect(status().isOk());
+
+        // then: 잔액보다 많은 금액 사용 시도 - 실패해야 함
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(useAmount)))
+                .andExpect(status().is4xxClientError());
+    }
 }
