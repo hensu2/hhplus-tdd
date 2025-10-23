@@ -31,10 +31,11 @@ public class PointService {
         checkAmount(useAmount,"사용 금액은 0보다 커야 합니다.");
 
         UserPoint userPoint = userPointTable.selectById(userId);
-        long updatePoint = userPoint.point() - useAmount;
-        if(updatePoint < 0){
+
+        if(userPoint.point() < useAmount){
             throw new IllegalArgumentException("포인트가 부족합니다.");
         }
+        long updatePoint = userPoint.point() - useAmount;
         UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
         pointHistoryTable.insert(userId,useAmount,TransactionType.USE,updateUserData.updateMillis());
         return updateUserData;
