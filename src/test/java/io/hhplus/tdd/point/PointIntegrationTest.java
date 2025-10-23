@@ -34,4 +34,26 @@ class PointIntegrationTest {
                 .andExpect(jsonPath("$.point").value(0));   // point == 0
     }
 
+    @Test
+    @DisplayName("포인트 충전 후 조회하면 충전된 금액이 반영된다")
+    void chargeAndGetPoint() throws Exception {
+        // given
+        long userId = 1L;
+        long chargeAmount = 1000L;
+
+        // when: 포인트 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)    // PatchMapping 으로 설정
+                        .content(String.valueOf(chargeAmount))) // RequestBody 설정
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) chargeAmount)));    // point == chargeAmount
+
+        // then: 포인트 조회
+        mockMvc.perform(get("/point/{id}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) chargeAmount)));
+    }
+
 }
