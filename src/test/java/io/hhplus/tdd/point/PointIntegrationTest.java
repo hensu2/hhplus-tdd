@@ -88,5 +88,17 @@ class PointIntegrationTest {
         //  point == 2000L
     }
 
+    @Test
+    @DisplayName("0 이하의 금액으로 충전을 시도하면 실패한다")
+    void chargeWithNegativeAmount() throws Exception {
+        // given
+        long userId = 5L;
+        long negativeAmount = -100L;
 
+        // when & then
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(negativeAmount)))
+                .andExpect(status().is4xxClientError());
+    }
 }
