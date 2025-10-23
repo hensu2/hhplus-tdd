@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -19,6 +21,9 @@ public class PointServiceTest {
 
     @Mock
     private UserPointTable userPointTable;
+
+    @Mock
+    private PointHistoryTable pointHistoryTable;
 
     @InjectMocks
     private PointService pointService;
@@ -82,23 +87,23 @@ public class PointServiceTest {
     }
 
     @Test
-    @DisplayName("포인트 충전한다")
+    @DisplayName("포인트를 충전한다")
     void chargePoint() {
         // given
         long userId = 1L;
-        long chargeAmount = 500L;   // 충전금액
-        UserPoint userPoint = new UserPoint(userId, 1000L, System.currentTimeMillis()); // userPoint 조회
-        UserPoint updatedUserPoint = new UserPoint(userId, 1500L, System.currentTimeMillis());  // 리턴값 설정
+        long chargeAmount = 500L;
+        UserPoint currentPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
+        UserPoint updatedPoint = new UserPoint(userId, 1500L, System.currentTimeMillis());
+
+        when(userPointTable.selectById(userId)).thenReturn(currentPoint);
+        when(userPointTable.insertOrUpdate(eq(userId), eq(1500L))).thenReturn(updatedPoint);
 
         // when
-        when(userPointTable.selectById(userId)).thenReturn(userPoint);  // userPoint 조회
-        when(userPointTable.insertOrUpdate(userId,updatedUserPoint.point())).thenReturn(updatedUserPoint);   //2번째 매개변수는 업데이트 할 포인트
+        UserPoint result = pointService.chargePoint(userId, chargeAmount);
 
         // then
-        UserPoint result = pointService.chargePoint(userId, chargeAmount);  // 포인트 조회 후 return.point 값 + chargeAmount 사용
-
-        assertThat(result.point()).isEqualTo(userPoint.point()+chargeAmount); // null이 아닌지
-        assertThat(result.id()).isEqualTo(userId);  // userId 가 같은지
+        assertThat(result.point()).isEqualTo(1500L);
+        verify(pointHistoryTable).insert(eq(userId), eq(chargeAmount), eq(TransactionType.CHARGE), eq(result.updateMillis()));
     }
 
     @Test
