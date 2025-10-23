@@ -22,9 +22,16 @@ public class PointService {
         if (chargeAmount <= 0) {
             throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
         }
-        UserPoint userpoint = userPointTable.selectById(userId);
-        long updatePoint = chargeAmount + userpoint.point();
-        pointHistoryTable.insert(userId,chargeAmount,TransactionType.CHARGE,userpoint.updateMillis());
+        UserPoint userPoint = userPointTable.selectById(userId);
+        long updatePoint =  userPoint.point() + chargeAmount;
+        pointHistoryTable.insert(userId,chargeAmount,TransactionType.CHARGE,userPoint.updateMillis());
+        return userPointTable.insertOrUpdate(userId,updatePoint);
+    }
+
+    public UserPoint usePoint(long userId, long useAmount) {
+        UserPoint userPoint = userPointTable.selectById(userId);
+        long updatePoint = userPoint.point() - useAmount;
+        pointHistoryTable.insert(userId,useAmount,TransactionType.USE,userPoint.updateMillis());
         return userPointTable.insertOrUpdate(userId,updatePoint);
     }
 }
