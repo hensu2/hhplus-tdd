@@ -19,9 +19,7 @@ public class PointService {
     }
 
     public UserPoint chargePoint(long userId, long chargeAmount) {
-        if (chargeAmount <= 0) {
-            throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
-        }
+        checkAmount(chargeAmount,"충전 금액은 0보다 커야 합니다.");
         UserPoint userPoint = userPointTable.selectById(userId);
         long updatePoint =  userPoint.point() + chargeAmount;
         UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
@@ -30,14 +28,18 @@ public class PointService {
     }
 
     public UserPoint usePoint(long userId, long useAmount) {
-        if (useAmount <= 0) {
-            throw new IllegalArgumentException("사용 금액은 0보다 커야 합니다.");
-        }
+        checkAmount(useAmount,"사용 금액은 0보다 커야 합니다.");
 
         UserPoint userPoint = userPointTable.selectById(userId);
         long updatePoint = userPoint.point() - useAmount;
         UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
         pointHistoryTable.insert(userId,useAmount,TransactionType.USE,updateUserData.updateMillis());
         return updateUserData;
+    }
+
+    private void checkAmount(long amount,String coment){
+        if(amount < 1){
+            throw new IllegalArgumentException(coment);
+        }
     }
 }
