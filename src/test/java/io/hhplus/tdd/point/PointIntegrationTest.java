@@ -157,4 +157,39 @@ class PointIntegrationTest {
                         .content(String.valueOf(useAmount)))
                 .andExpect(status().is4xxClientError());
     }
+
+    @Test
+    @DisplayName("포인트 충전/사용 후 내역을 조회하면 모든 거래가 기록된다")
+    void getPointHistoryAfterTransactions() throws Exception {
+        // given
+        long userId = 3L;
+        long chargeAmount1 = 2000L;
+        long chargeAmount2 = 3000L;
+        long useAmount = 1500L;
+
+        // when: 첫 번째 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount1)))
+                .andExpect(status().isOk());
+
+        // when: 두 번째 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount2)))
+                .andExpect(status().isOk());
+
+        // when: 포인트 사용
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(useAmount)))
+                .andExpect(status().isOk());
+
+        // then: 내역 조회 - 3건의 거래가 기록되어야 함
+        mockMvc.perform(get("/point/{id}/histories", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(3))))
+                .andExpect(jsonPath("$[*].userId", everyItem(equalTo((int) userId))));
+    }
+
 }
