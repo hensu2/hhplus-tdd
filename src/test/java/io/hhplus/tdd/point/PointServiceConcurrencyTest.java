@@ -131,4 +131,38 @@ public class PointServiceConcurrencyTest {
         assertThat(failCount.get()).isEqualTo(10);
         assertThat(result.point()).isEqualTo(0L); // 1000 - (10 * 100) = 0
     }
+
+    @Test
+    @DisplayName("동시에 여러 스레드가 0원 이하 금액으로 충전을 시도하면 모두 실패한다")
+    void concurrentChargeWithInvalidAmount() throws InterruptedException {
+        // given
+        long userId = 4L;
+        int threadCount = 10;
+        long invalidAmount = -100L;
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger failCount = new AtomicInteger(0);
+
+        // when: 10개 스레드가 동시에 -100 포인트 충전 시도
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    pointService.chargePoint(userId, invalidAmount);
+                } catch (IllegalArgumentException e) {
+                    // 음수 금액으로 실패
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // then: 모두 실패하고 포인트는 0으로 유지
+        UserPoint result = pointService.getUserPoint(userId);
+        assertThat(failCount.get()).isEqualTo(threadCount);
+        assertThat(result.point()).isEqualTo(0L);
+    }
 }
