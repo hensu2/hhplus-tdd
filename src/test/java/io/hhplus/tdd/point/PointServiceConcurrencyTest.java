@@ -50,4 +50,44 @@ public class PointServiceConcurrencyTest {
         assertThat(result.point()).isEqualTo(1000L);
         assertThat(successCount.get()).isEqualTo(threadCount);
     }
+
+    @Test
+    @DisplayName("동시에 충전과 사용이 발생해도 정확한 금액이 반영된다")
+    void concurrentChargeAndUseTest() throws InterruptedException {
+        // given
+        long userId = 2L;
+        long initialAmount = 10000L;
+        int threadCount = 20;
+
+        // 초기 포인트 충전
+        pointService.chargePoint(userId, initialAmount);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        // when: 10개 스레드는 충전(+100), 10개 스레드는 사용(-100)
+        for (int i = 0; i < threadCount; i++) {
+            final int index = i;
+            executorService.submit(() -> {
+                try {
+                    if (index % 2 == 0) {
+                        pointService.chargePoint(userId, 100L);
+                    } else {
+                        pointService.usePoint(userId, 100L);
+                    }
+                    successCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // then: 초기 금액 10000이 유지되어야 함 (10번 충전 +1000, 10번 사용 -1000)
+        UserPoint result = pointService.getUserPoint(userId);
+        assertThat(result.point()).isEqualTo(initialAmount);
+        assertThat(successCount.get()).isEqualTo(threadCount);
+    }
 }
