@@ -104,6 +104,7 @@ public class PointServiceTest {
         // then
         assertThat(result.point()).isEqualTo(1500L);
         verify(pointHistoryTable).insert(eq(userId), eq(chargeAmount), eq(TransactionType.CHARGE), eq(result.updateMillis()));
+        // insert 호출 되었는지 매개변수 eq는 매개변수랑 같은지 검증
     }
 
     @Test
