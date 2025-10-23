@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 @Service
 public class PointService {
@@ -24,24 +25,18 @@ public class PointService {
     }
 
     public UserPoint chargePoint(long userId, long chargeAmount) {
-        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
-        lock.lock();
-        try {
+        return executeWithLock(userId, () -> {
             checkAmount(chargeAmount,"충전 금액은 0보다 커야 합니다.");
             UserPoint userPoint = userPointTable.selectById(userId);
             long updatePoint =  userPoint.point() + chargeAmount;
             UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
             pointHistoryTable.insert(userId,chargeAmount,TransactionType.CHARGE,updateUserData.updateMillis());
             return updateUserData;
-        } finally {
-            lock.unlock();
-        }
+        });
     }
 
     public UserPoint usePoint(long userId, long useAmount) {
-        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
-        lock.lock();
-        try {
+        return executeWithLock(userId, () -> {
             checkAmount(useAmount,"사용 금액은 0보다 커야 합니다.");
 
             UserPoint userPoint = userPointTable.selectById(userId);
@@ -53,6 +48,14 @@ public class PointService {
             UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
             pointHistoryTable.insert(userId,useAmount,TransactionType.USE,updateUserData.updateMillis());
             return updateUserData;
+        });
+    }
+
+    private UserPoint executeWithLock(long userId, Supplier<UserPoint> action) {
+        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            return action.get();
         } finally {
             lock.unlock();
         }
