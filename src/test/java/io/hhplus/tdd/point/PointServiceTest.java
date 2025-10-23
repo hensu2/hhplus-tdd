@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -132,4 +133,24 @@ public class PointServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("충전 금액은 0보다 커야 합니다.");
     }
+
+    @Test
+    @DisplayName("포인트를 사용한다")
+    void usePoint() {
+        // given
+        long userId = 1L;
+        long useAmount = 100;
+
+        UserPoint currentPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
+        UserPoint updatedPoint = new UserPoint(userId, 500L, System.currentTimeMillis());
+
+        //when
+        UserPoint result = pointService.usePoint(userId, useAmount);
+
+        // then
+        assertThat(result.point()).isEqualTo(500L);
+        verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.CHARGE), eq(result.updateMillis()));
+
+    }
+
 }
