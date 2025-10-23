@@ -24,14 +24,16 @@ public class PointService {
         }
         UserPoint userPoint = userPointTable.selectById(userId);
         long updatePoint =  userPoint.point() + chargeAmount;
-        pointHistoryTable.insert(userId,chargeAmount,TransactionType.CHARGE,userPoint.updateMillis());
-        return userPointTable.insertOrUpdate(userId,updatePoint);
+        UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
+        pointHistoryTable.insert(userId,chargeAmount,TransactionType.CHARGE,updateUserData.updateMillis());
+        return updateUserData;
     }
 
     public UserPoint usePoint(long userId, long useAmount) {
         UserPoint userPoint = userPointTable.selectById(userId);
         long updatePoint = userPoint.point() - useAmount;
-        pointHistoryTable.insert(userId,useAmount,TransactionType.USE,userPoint.updateMillis());
-        return userPointTable.insertOrUpdate(userId,updatePoint);
+        UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
+        pointHistoryTable.insert(userId,useAmount,TransactionType.USE,updateUserData.updateMillis());
+        return updateUserData;
     }
 }
