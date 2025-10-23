@@ -103,7 +103,7 @@ public class PointServiceTest {
 
     @Test
     @DisplayName("포인트 충전 시 포인트가 0면 에러 발생")
-    void chargePoint_Not() {
+    void chargePoint_InvalidAmount() {
         // given
         long userId = 1L;
         long chargeAmount = 0;   // 충전금액
@@ -114,4 +114,16 @@ public class PointServiceTest {
                 .hasMessage("충전 금액은 0보다 커야 합니다.");
     }
 
+    @Test
+    @DisplayName("충전 금액이 음수면 예외가 발생한다")
+    void chargePoint_NegativeAmount() {
+        // given
+        long userId = 1L;
+        long chargeAmount = -100;   // 충전금액
+
+        // when & then
+        assertThatThrownBy(() -> pointService.chargePoint(userId, chargeAmount)) //
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("충전 금액은 0보다 커야 합니다.");
+    }
 }
