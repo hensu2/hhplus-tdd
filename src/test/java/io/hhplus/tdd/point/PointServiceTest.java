@@ -167,5 +167,18 @@ public class PointServiceTest {
                 .hasMessage("사용 금액은 0보다 커야 합니다.");
     }
 
+    @Test
+    @DisplayName("사용 금액이 음수면 예외가 발생한다")
+    void usePoint_NegativeAmount() {
+        // given
+        long userId = 1L;
+        long useAmount = -100;   // 사용금액
+
+        // when & then
+        assertThatThrownBy(() -> pointService.usePoint(userId, useAmount)) //
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("사용 금액은 0보다 커야 합니다.");
+    }
+
 
 }
