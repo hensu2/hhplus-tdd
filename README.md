@@ -1,0 +1,255 @@
+# 포인트 관리 시스템
+
+TDD 방식으로 구현한 사용자 포인트 관리 시스템입니다.
+
+## 주요 기능
+
+### 1. 포인트 조회
+- 특정 사용자의 현재 포인트 잔액 조회
+- 사용자가 존재하지 않을 경우 0 포인트로 초기화된 UserPoint 객체 반환
+
+### 2. 포인트 충전
+- 사용자 포인트 충전
+- 충전 금액은 양수만 허용 (0 이하 시 예외 발생)
+- 충전 내역은 히스토리에 자동 기록
+
+### 3. 포인트 사용
+- 사용자 포인트 차감
+- 사용 금액은 양수만 허용 (0 이하 시 예외 발생)
+- 잔액 부족 시 예외 발생
+- 사용 내역은 히스토리에 자동 기록
+
+### 4. 포인트 내역 조회
+- 특정 사용자의 포인트 충전/사용 내역 전체 조회
+
+## API 엔드포인트
+
+### 포인트 조회
+```
+GET /point/{id}
+```
+
+### 포인트 충전
+```
+PATCH /point/{id}/charge
+Content-Type: application/json
+
+500
+```
+
+### 포인트 사용
+```
+PATCH /point/{id}/use
+Content-Type: application/json
+
+300
+```
+
+### 포인트 내역 조회
+```
+GET /point/{id}/histories
+```
+
+## 예외 처리
+
+- 충전/사용 금액이 0 이하인 경우: `IllegalArgumentException`
+- 잔액이 부족한 경우: `IllegalArgumentException`
+
+## 테스트
+
+### 단위 테스트 (Unit Tests)
+`PointServiceTest`를 통해 모든 기능과 예외 케이스를 검증했습니다.
+
+**테스트 항목:**
+- 사용자 포인트 조회
+- 존재하지 않는 사용자 조회 (0 포인트 반환)
+- 포인트 충전
+- 충전 금액이 0인 경우 예외 발생
+- 충전 금액이 음수인 경우 예외 발생
+- 포인트 사용
+- 사용 금액이 0인 경우 예외 발생
+- 사용 금액이 음수인 경우 예외 발생
+- 잔액 부족 시 예외 발생
+- 충전/사용 내역 조회
+
+### 동시성 테스트 (Concurrency Tests)
+`PointServiceConcurrencyTest`를 통해 멀티스레드 환경에서 데이터 정합성을 검증했습니다.
+
+**테스트 항목:**
+- 동시에 여러 스레드가 같은 사용자 포인트 충전
+- 동시에 충전과 사용이 발생하는 경우
+- 잔액 부족 상황에서 동시 사용 시도
+- 0원 이하 금액으로 동시 충전 시도
+
+### 통합 테스트 (Integration Tests)
+`PointIntegrationTest`를 통해 Controller부터 Service까지 전체 흐름을 검증했습니다.
+
+### 테스트 실행
+```bash
+# 전체 테스트 실행
+./gradlew test
+
+# 특정 테스트만 실행
+./gradlew test --tests "PointServiceTest"
+./gradlew test --tests "PointServiceConcurrencyTest"
+```
+
+## 동시성 제어 전략
+
+### 구현된 방식: 비관적 락 (Pessimistic Lock)
+
+사용자별 `ReentrantLock`을 사용하여 동시성 문제를 해결했습니다.
+
+#### 구현 내용
+
+```java
+@Service
+public class PointService {
+    private final ConcurrentHashMap<Long, ReentrantLock> userLocks = new ConcurrentHashMap<>();
+
+    public UserPoint chargePoint(long userId, long chargeAmount) {
+        return executeWithLock(userId, () -> {
+            // 충전 로직
+        });
+    }
+
+    private UserPoint executeWithLock(long userId, Supplier<UserPoint> action) {
+        ReentrantLock lock = userLocks.computeIfAbsent(userId, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            return action.get();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+#### 선택 이유
+
+**장점:**
+- 구현이 간단하고 명확
+- 데이터 일관성 완벽 보장
+- In-memory 데이터베이스와 호환
+- 사용자별 독립적인 Lock으로 성능 최적화
+
+**단점:**
+- Lock 대기 시간으로 인한 처리량 감소 (현재 프로젝트 규모에서는 문제 없음)
+- 서버가 여러 대일 경우 분산 락 필요 (향후 고려사항)
+
+#### 동작 방식
+
+1. **사용자별 Lock 관리**: `ConcurrentHashMap`에 userId별로 `ReentrantLock` 저장
+2. **Critical Section 보호**: 포인트 조회 → 계산 → 업데이트 전체 구간을 Lock으로 보호
+3. **예외 처리**: `finally` 블록에서 반드시 unlock하여 데드락 방지
+
+#### 검증된 시나리오
+
+- ✅ 10개 스레드 동시 충전 → 정확히 1000 포인트 충전
+- ✅ 충전 10개 + 사용 10개 동시 발생 → 데이터 정합성 유지
+- ✅ 잔액 부족 시 동시 사용 시도 → 정확히 10번만 성공
+- ✅ 음수 금액 동시 충전 시도 → 모두 예외 발생, 데이터 보호
+
+### 향후 확장 가능한 방안
+
+#### 1. 낙관적 락 (Optimistic Lock)
+버전 필드를 추가하여 충돌 감지:
+
+**장점:**
+- Lock 대기가 없어 처리량 우수
+- 동시성이 낮은 환경에서 효율적
+
+**단점:**
+- 충돌 시 재시도 로직 필요
+- UserPoint 레코드 구조 변경 필요
+
+#### 2. 분산 락 (Distributed Lock)
+Redis 등을 활용한 분산 환경 지원:
+
+**장점:**
+- 다중 서버 환경에서도 동작
+- 확장성 우수
+
+**단점:**
+- Redis 등 외부 의존성 필요
+- 네트워크 오버헤드
+
+### 권장 사항
+
+- **현재 단일 서버 환경**: 비관적 락 (ReentrantLock) - ✅ 현재 적용됨
+- **향후 분산 환경**: 분산 락 (Redis Redisson)으로 전환 고려
+
+## 빌드 및 실행
+
+### 빌드
+```bash
+./gradlew build
+```
+
+### 실행
+```bash
+./gradlew bootRun
+```
+
+## 기술 스택
+
+- Java 17
+- Spring Boot 3.2.0
+- Gradle (Kotlin DSL)
+- JUnit 5
+- Mockito
+- Lombok
+
+## 아키텍처
+
+```
+┌─────────────────┐
+│ PointController │  REST API Layer
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  PointService   │  Business Logic Layer (+ Concurrency Control)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ UserPointTable  │  Data Access Layer (In-Memory)
+│HistoryTable     │
+└─────────────────┘
+```
+
+## 프로젝트 구조
+
+```
+src/
+├── main/
+│   └── java/
+│       └── io/hhplus/tdd/
+│           ├── database/
+│           │   ├── PointHistoryTable.java
+│           │   └── UserPointTable.java
+│           └── point/
+│               ├── PointController.java
+│               ├── PointHistory.java
+│               ├── PointService.java (동시성 제어 구현)
+│               ├── TransactionType.java
+│               └── UserPoint.java
+└── test/
+    └── java/
+        └── io/hhplus/tdd/
+            └── point/
+                ├── PointServiceTest.java (단위 테스트)
+                ├── PointServiceConcurrencyTest.java (동시성 테스트)
+                └── PointIntegrationTest.java (통합 테스트)
+```
+
+## 개발 원칙
+
+이 프로젝트는 다음 원칙을 따릅니다:
+
+1. **TDD (Test-Driven Development)**: 테스트 먼저 작성 후 구현
+2. **Red-Green-Refactor**: 실패 → 성공 → 개선 사이클
+3. **단일 책임 원칙**: 각 클래스는 하나의 책임만 가짐
+4. **불변성**: Record를 사용한 불변 도메인 모델
+5. **동시성 안전성**: ReentrantLock으로 Thread-safe 보장
