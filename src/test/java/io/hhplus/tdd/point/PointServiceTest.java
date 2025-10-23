@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
@@ -194,5 +196,34 @@ public class PointServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("포인트가 부족합니다.");
     }
+
+    @Test
+    @DisplayName("유저의 충전/사용 내역을 조회한다")
+    void getUserPointHistory() {
+        // given
+        // 파라미터 설정
+        long userId = 1L;
+        // 리턴 데이터 설정
+        List<PointHistory> userPointHistory = List.of(
+                new PointHistory(1L, userId, 1000L, TransactionType.CHARGE, now),
+                new PointHistory(2L, userId, 500L, TransactionType.USE, now + 1000),
+                new PointHistory(3L, userId, 2000L, TransactionType.CHARGE, now + 2000)
+        );
+
+        when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(userPointHistory);
+
+        // when
+        List<PointHistory> result = pointService.getPointHistory(userId);
+
+        // then
+        assertThat(result).hasSize(3);
+        assertThat(result.get(0).type()).isEqualTo(TransactionType.CHARGE);
+        assertThat(result.get(0).amount()).isEqualTo(1000L);
+        assertThat(result.get(1).type()).isEqualTo(TransactionType.USE);
+        assertThat(result.get(1).amount()).isEqualTo(500L);
+        assertThat(result.get(2).type()).isEqualTo(TransactionType.CHARGE);
+        assertThat(result.get(2).amount()).isEqualTo(2000L);
+    }
+
 
 }
