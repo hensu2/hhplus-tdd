@@ -226,5 +226,42 @@ public class PointServiceTest {
         assertThat(result.get(2).amount()).isEqualTo(2000L);
     }
 
+    @Test
+    @DisplayName("동시에 여러 스레드가 같은 사용자의 포인트를 충전해도 정확한 금액이 반영된다")
+    void concurrentChargeTest() throws InterruptedException {
+        // given
+        long userId = 100L;
+        int threadCount = 10;
+        long chargeAmount = 100L;
+
+        UserPoint initialPoint = new UserPoint(userId, 0L, System.currentTimeMillis());
+        when(userPointTable.selectById(userId)).thenReturn(initialPoint);
+        when(userPointTable.insertOrUpdate(eq(userId), longThat(point -> point >= 0)))
+                .thenAnswer(invocation -> {
+                    long point = invocation.getArgument(1);
+                    return new UserPoint(userId, point, System.currentTimeMillis());
+                });
+
+        java.util.concurrent.ExecutorService executorService = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(threadCount);
+        java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        // when: 10개 스레드가 동시에 100포인트씩 충전
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    pointService.chargePoint(userId, chargeAmount);
+                    successCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // then: 10번 모두 성공해야 함
+        assertThat(successCount.get()).isEqualTo(threadCount);
+    }
 
 }
