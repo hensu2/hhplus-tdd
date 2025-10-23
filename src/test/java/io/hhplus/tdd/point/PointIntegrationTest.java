@@ -115,4 +115,25 @@ class PointIntegrationTest {
                         .content(String.valueOf(negativeAmount)))
                 .andExpect(status().is4xxClientError());
     }
+
+    @Test
+    @DisplayName("0 이하의 금액으로 사용을 시도하면 실패한다")
+    void useWithNegativeAmount() throws Exception {
+        // given
+        long userId = 6L;
+        long chargeAmount = 1000L;
+        long negativeAmount = -100L;
+
+        // when: 포인트 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(chargeAmount)))
+                .andExpect(status().isOk());
+
+        // then: 음수 금액 사용 시도 - 실패해야 함
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(negativeAmount)))
+                .andExpect(status().is4xxClientError());
+    }
 }
