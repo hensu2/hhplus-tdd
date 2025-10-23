@@ -37,9 +37,9 @@ public class PointService {
         return updateUserData;
     }
 
-    private void checkAmount(long amount,String coment){
+    private void checkAmount(long amount,String comment){
         if(amount < 1){
-            throw new IllegalArgumentException(coment);
+            throw new IllegalArgumentException(comment);
         }
     }
 }
