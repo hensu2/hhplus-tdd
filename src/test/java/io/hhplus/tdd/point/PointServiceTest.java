@@ -139,18 +139,19 @@ public class PointServiceTest {
     void usePoint() {
         // given
         long userId = 1L;
-        long useAmount = 100;
-
+        long useAmount = 500L;
         UserPoint currentPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
         UserPoint updatedPoint = new UserPoint(userId, 500L, System.currentTimeMillis());
 
-        //when
+        when(userPointTable.selectById(userId)).thenReturn(currentPoint);
+        when(userPointTable.insertOrUpdate(eq(userId), eq(500L))).thenReturn(updatedPoint);
+
+        // when
         UserPoint result = pointService.usePoint(userId, useAmount);
 
         // then
         assertThat(result.point()).isEqualTo(500L);
-        verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.CHARGE), eq(result.updateMillis()));
-
+        verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.USE), eq(result.updateMillis()));
     }
 
 }
