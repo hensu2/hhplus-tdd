@@ -225,4 +225,54 @@ class PointIntegrationTest {
                 .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) chargeAmount2)));
     }
 
+    @Test
+    @DisplayName("전체 플로우: 충전 -> 사용 -> 조회 -> 내역 확인")
+    void completeFlow() throws Exception {
+        // given
+        long userId = 7L;
+        long initialCharge = 10000L;
+        long firstUse = 3000L;
+        long secondCharge = 5000L;
+        long secondUse = 2000L;
+        long expectedFinalBalance = initialCharge - firstUse + secondCharge - secondUse;
+
+        // when: 초기 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(initialCharge)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) initialCharge)));
+
+        // when: 첫 번째 사용
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(firstUse)))
+                .andExpect(status().isOk());
+
+        // when: 두 번째 충전
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(secondCharge)))
+                .andExpect(status().isOk());
+
+        // when: 두 번째 사용
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.valueOf(secondUse)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) expectedFinalBalance)));
+
+        // then: 최종 포인트 조회
+        mockMvc.perform(get("/point/{id}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.point").value(greaterThanOrEqualTo((int) expectedFinalBalance)));
+
+        // then: 거래 내역 조회 - 4건의 거래가 있어야 함
+        mockMvc.perform(get("/point/{id}/histories", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(4))))
+                .andExpect(jsonPath("$[*].userId", everyItem(equalTo((int) userId))));
+    }
+
 }
