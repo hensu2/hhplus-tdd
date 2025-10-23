@@ -32,6 +32,9 @@ public class PointService {
 
         UserPoint userPoint = userPointTable.selectById(userId);
         long updatePoint = userPoint.point() - useAmount;
+        if(updatePoint < 0){
+            throw new IllegalArgumentException("포인트가 부족합니다.");
+        }
         UserPoint updateUserData = userPointTable.insertOrUpdate(userId,updatePoint);
         pointHistoryTable.insert(userId,useAmount,TransactionType.USE,updateUserData.updateMillis());
         return updateUserData;
